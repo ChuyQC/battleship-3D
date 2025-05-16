@@ -3,35 +3,57 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.136';
 import { RigidBody } from './physics.js';
 
+// static size of each grid cell in world units
+const CELL_SIZE = 6;
+
 /**
- * Create a ground plane with a grid overlay and static physics body.
+ * Create a ground plane and overlay grid lines sized by block counts.
+ * Blocks are fixed at CELL_SIZE; grid spans widthBlocks × depthBlocks cells.
+ * No diagonal grid lines—only axis-aligned.
  * @param {THREE.Scene} scene
  * @param {Ammo.btDiscreteDynamicsWorld} physicsWorld
- * @param {number} rows      Number of grid cells along Z-axis
- * @param {number} cols      Number of grid cells along X-axis
- * @param {number} cellSize  World-unit size of each grid cell
- * @returns {{ ground: THREE.Mesh, cellSize: number }}
+ * @param {number} widthBlocks  Number of cells along the X-axis
+ * @param {number} depthBlocks  Number of cells along the Z-axis
+ * @returns {{ ground: THREE.Mesh, grid: THREE.Group, cellSize: number }}
  */
-export function addGrid(scene, physicsWorld, rows = 10, cols = 10, cellSize = 6) {
-  const width = cols * cellSize;
-  const depth = rows * cellSize;
+export function addGrid(scene, physicsWorld, widthBlocks = 10, depthBlocks = 10) {
+  const width  = widthBlocks * CELL_SIZE;
+  const depth  = depthBlocks * CELL_SIZE;
 
-  // 1) Ground mesh (flat box)
+  // 1) Ground mesh
   const groundGeo = new THREE.BoxGeometry(width, 1, depth);
-  const groundMat = new THREE.MeshStandardMaterial({ color: 0x03030 });
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x404040 });
   const ground    = new THREE.Mesh(groundGeo, groundMat);
   ground.receiveShadow = true;
   scene.add(ground);
 
-// 2) Grid overlay on XZ-plane (slightly above the ground so it’s visible)
-const gridHelper = new THREE.GridHelper(
-    Math.max(width, depth),
-    Math.max(cols, rows),
-    0x888888,
-    0x444444
-  );
-  gridHelper.position.y = 0.52;  // ground is 1 unit tall, so top sits at 0.5
-  scene.add(gridHelper);
+  // 2) Grid lines group—draw only axis-aligned lines
+  const grid = new THREE.Group();
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x888888 });
+
+  // vertical lines (parallel to Z)
+  for (let i = 0; i <= widthBlocks; i++) {
+    const x = -width / 2 + i * CELL_SIZE;
+    const points = [
+      new THREE.Vector3(x, 0.51, -depth / 2),
+      new THREE.Vector3(x, 0.51,  depth / 2)
+    ];
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+    grid.add(new THREE.Line(geom, lineMat));
+  }
+
+  // horizontal lines (parallel to X)
+  for (let j = 0; j <= depthBlocks; j++) {
+    const z = -depth / 2 + j * CELL_SIZE;
+    const points = [
+      new THREE.Vector3(-width / 2, 0.51, z),
+      new THREE.Vector3( width / 2, 0.51, z)
+    ];
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+    grid.add(new THREE.Line(geom, lineMat));
+  }
+
+  scene.add(grid);
 
   // 3) Static physics body matching the ground
   const rb = new RigidBody();
@@ -43,5 +65,5 @@ const gridHelper = new THREE.GridHelper(
   );
   physicsWorld.addRigidBody(rb.body_);
 
-  return { ground, cellSize };
+  return { ground, grid, cellSize: CELL_SIZE };
 }

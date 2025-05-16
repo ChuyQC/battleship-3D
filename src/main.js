@@ -1,16 +1,17 @@
 // src/main.js
 
-import { createCamera }        from './modules/camera.js';
+import { createCamera }      from './modules/camera.js';
 import {
   createRenderer,
   buildScene,
   setupControls,
   setupResize
-}                               from './modules/scene.js';
-import { initPhysics }          from './modules/physics.js';
-import { addGrid }              from './modules/grid.js';
-import { addShips }             from './modules/ships.js';
-import { setupShipSpawner }     from './modules/spawnShips.js';
+}                             from './modules/scene.js';
+import { initPhysics }        from './modules/physics.js';
+import { addGrid }            from './modules/grid.js';
+import { addWall }            from './modules/objects.js';
+import { addShips }           from './modules/ships.js';
+import { setupShipSpawner }   from './modules/spawnShips.js';
 
 let rigidBodies = [];
 let tmpTransform;
@@ -19,7 +20,7 @@ window.addEventListener('DOMContentLoaded', () => {
   Ammo().then(lib => {
     Ammo = lib;
 
-    // Renderer & Scene
+    // Renderer + Scene
     const renderer    = createRenderer();
     const camera      = createCamera();
     const scene       = buildScene();
@@ -30,11 +31,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const physicsWorld = initPhysics();
     tmpTransform       = new Ammo.btTransform();
 
-    // Ground + Grid (20×20 cells of size 6 units)
-    const { ground, cellSize } = addGrid(scene, physicsWorld, 20, 20, 6);
+    // Ground + Grid (20 × 15 blocks, each 6 units)
+    const { ground, gridHelper, cellSize } = addGrid(scene, physicsWorld, 20, 30);
 
-    // Optional: spawn initial ships
-    addShips(scene, physicsWorld, rigidBodies);
+    // Wall spanning 20 blocks
+    addWall(scene, physicsWorld, 20, cellSize);
+
+
 
     // Enable click-and-snap spawning with 'R' rotation
     setupShipSpawner(
@@ -53,10 +56,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const delta = (time - prevTime) * 0.001;
       prevTime     = time;
 
-      // Step physics
       physicsWorld.stepSimulation(delta, 10);
-
-      // Sync Three.js meshes with Ammo bodies
       for (const { mesh, rigidBody } of rigidBodies) {
         rigidBody.motionState_.getWorldTransform(tmpTransform);
         const p = tmpTransform.getOrigin();

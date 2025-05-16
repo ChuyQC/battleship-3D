@@ -35,17 +35,18 @@ export function createShip(scene, physicsWorld, rigidBodies, position, blockCoun
     shipGroup.add(cube);
   }
 
-  // 2) Add connecting rods between blocks
-  const rodGeo = new THREE.CylinderGeometry(blockSize * 0.1, blockSize * 0.1, blockSize);
-  const rodMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+  // 2) Add vertical rods between blocks
+  const rodRadius = blockSize * 0.1;
+  const rodHeight = blockSize;
+  const rodGeo    = new THREE.CylinderGeometry(rodRadius, rodRadius, rodHeight);
+  const rodMat    = new THREE.MeshStandardMaterial({ color: 0x333333 });
   for (let i = 0; i < blockCount - 1; i++) {
     const rod = new THREE.Mesh(rodGeo, rodMat);
     rod.castShadow    = true;
     rod.receiveShadow = true;
-    // align along X-axis
-    rod.rotation.z = Math.PI / 2;
     const xPos = -halfLength + blockSize + i * blockSize;
-    rod.position.set(xPos, blockSize * 0.5, 0);
+    // center rod vertically atop blocks
+    rod.position.set(xPos, blockSize, 0);
     shipGroup.add(rod);
   }
 

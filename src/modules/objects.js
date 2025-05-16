@@ -31,8 +31,7 @@ export function addWall(scene, physicsWorld, blockLength = 10, cellSize = 6) {
 
 /**
  * Stack alternating spheres and boxes off to one side.
- */
-export function addStack(scene, physicsWorld) {
+ * export function addStack(scene, physicsWorld) {
   const rigidBodies = [];
   let isSphere = true;
 
@@ -79,6 +78,8 @@ export function addStack(scene, physicsWorld) {
 
   return rigidBodies;
 }
+ */
+
 
 /**
  * Spawn a random box into the scene + physics world.
