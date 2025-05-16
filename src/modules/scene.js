@@ -1,10 +1,11 @@
+// src/modules/scene.js
 import * as THREE from 'https://cdn.skypack.dev/three@0.136';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136/examples/jsm/controls/OrbitControls.js';
 
 export function createRenderer() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
@@ -13,25 +14,19 @@ export function createRenderer() {
 
 export function buildScene() {
   const scene = new THREE.Scene();
-
-  // Directional light
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
   dirLight.position.set(20, 100, 10);
-  dirLight.target.position.set(0, 0, 0);
   dirLight.castShadow = true;
-  dirLight.shadow.bias   = -0.001;
-  dirLight.shadow.mapSize.set(2048, 2048);
   Object.assign(dirLight.shadow.camera, {
-    near: 0.5, far: 500,
-    left: 100, right: -100,
-    top: 100, bottom: -100
+    near: 0.5,
+    far: 500,
+    left: 100,
+    right: -100,
+    top: 100,
+    bottom: -100
   });
   scene.add(dirLight);
-
-  // Ambient fill
   scene.add(new THREE.AmbientLight(0x101010));
-
-  // Skybox
   const loader = new THREE.CubeTextureLoader();
   scene.background = loader.load([
     './resources/posx.jpg',
@@ -39,9 +34,8 @@ export function buildScene() {
     './resources/posy.jpg',
     './resources/negy.jpg',
     './resources/posz.jpg',
-    './resources/negz.jpg',
+    './resources/negz.jpg'
   ]);
-
   return scene;
 }
 

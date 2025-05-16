@@ -1,73 +1,73 @@
-import { createCamera } from './modules/camera.js';
+// src/main.js
+
+import { createCamera }        from './modules/camera.js';
 import {
   createRenderer,
   buildScene,
   setupControls,
   setupResize
-} from './modules/scene.js';
-import { initPhysics } from './modules/physics.js';
-import { addGround, addStack, spawnRandom } from './modules/objects.js';
-import { addWall } from './modules/objects.js';
-import { addShips } from './modules/ships.js';  
-
+}                               from './modules/scene.js';
+import { initPhysics }          from './modules/physics.js';
+import { addGrid }              from './modules/grid.js';
+import { addShips }             from './modules/ships.js';
+import { setupShipSpawner }     from './modules/spawnShips.js';
 
 let rigidBodies = [];
 let tmpTransform;
 
 window.addEventListener('DOMContentLoaded', () => {
-  Ammo().then((lib) => {
+  Ammo().then(lib => {
     Ammo = lib;
-    // three.js setup
-    const renderer = createRenderer();
-    const camera   = createCamera();
-    const scene    = buildScene();
+
+    // Renderer & Scene
+    const renderer    = createRenderer();
+    const camera      = createCamera();
+    const scene       = buildScene();
     setupControls(camera, renderer);
     setupResize(camera, renderer);
 
-    // physics setup
+    // Physics
     const physicsWorld = initPhysics();
-    tmpTransform = new Ammo.btTransform();
+    tmpTransform       = new Ammo.btTransform();
 
-    // populate
-    addGround(scene, physicsWorld);
-    addWall(scene, physicsWorld);
-    //rigidBodies = addStack(scene, physicsWorld);
+    // Ground + Grid (20×20 cells of size 6 units)
+    const { ground, cellSize } = addGrid(scene, physicsWorld, 20, 20, 6);
 
-    // ← spawn ships from the new module
+    // Optional: spawn initial ships
     addShips(scene, physicsWorld, rigidBodies);
 
-    // main loop
-    let prevTime = null;
-    let countdown = 1.0;
-    let spawnCount = 0;
+    // Enable click-and-snap spawning with 'R' rotation
+    setupShipSpawner(
+      scene,
+      camera,
+      ground,
+      physicsWorld,
+      rigidBodies,
+      cellSize
+    );
 
+    // Animation loop
+    let prevTime = null;
     function animate(time) {
       if (!prevTime) prevTime = time;
       const delta = (time - prevTime) * 0.001;
-      prevTime = time;
+      prevTime     = time;
 
-      // spawn logic
-      //countdown -= delta;
-      //if (countdown < 0 && spawnCount < 10) {
-      //  countdown = 0.25;
-      //  spawnCount++;
-      //  spawnRandom(scene, physicsWorld, rigidBodies);
-      //}
-
-      // physics step
+      // Step physics
       physicsWorld.stepSimulation(delta, 10);
+
+      // Sync Three.js meshes with Ammo bodies
       for (const { mesh, rigidBody } of rigidBodies) {
         rigidBody.motionState_.getWorldTransform(tmpTransform);
-        const pos  = tmpTransform.getOrigin();
-        const quat = tmpTransform.getRotation();
-        mesh.position.set(pos.x(), pos.y(), pos.z());
-        mesh.quaternion.set(quat.x(), quat.y(), quat.z(), quat.w());
+        const p = tmpTransform.getOrigin();
+        const q = tmpTransform.getRotation();
+        mesh.position.set(p.x(), p.y(), p.z());
+        mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
       }
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
-
     requestAnimationFrame(animate);
   });
 });

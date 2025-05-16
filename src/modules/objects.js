@@ -1,20 +1,37 @@
+// src/modules/objects.js
 import * as THREE from 'https://cdn.skypack.dev/three@0.136';
 import { RigidBody, DEFAULT_MASS } from './physics.js';
 
-export function addGround(scene, physicsWorld) {
-  const geo = new THREE.BoxGeometry(100, 1, 100);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x404040 });
-  const ground = new THREE.Mesh(geo, mat);
-  ground.castShadow   = false;
-  ground.receiveShadow= true;
-  scene.add(ground);
+/**
+ * Add a static wall whose length is specified in grid blocks.
+ * @param {THREE.Scene} scene
+ * @param {Ammo.btDiscreteDynamicsWorld} physicsWorld
+ * @param {number} blockLength  Number of grid blocks to span (i.e., columns)
+ * @param {number} cellSize     Size of each grid cell in world units
+ */
+export function addWall(scene, physicsWorld, blockLength = 10, cellSize = 6) {
+  const width  = blockLength * cellSize;
+  const height = 10;
+  const depth  = 1;
+  const size   = new THREE.Vector3(width, height, depth);
+
+  const geo  = new THREE.BoxGeometry(size.x, size.y, size.z);
+  const mat  = new THREE.MeshStandardMaterial({ color: 0x888888 });
+  const wall = new THREE.Mesh(geo, mat);
+
+  wall.position.set(0, size.y * 0.5, 0);
+  wall.castShadow    = false;
+  wall.receiveShadow = true;
+  scene.add(wall);
 
   const rb = new RigidBody();
-  rb.createBox(0, ground.position, ground.quaternion, new THREE.Vector3(100, 1, 100));
-  rb.setRestitution(0.99);
+  rb.createBox(0, wall.position, wall.quaternion, size);
   physicsWorld.addRigidBody(rb.body_);
 }
 
+/**
+ * Stack alternating spheres and boxes off to one side.
+ */
 export function addStack(scene, physicsWorld) {
   const rigidBodies = [];
   let isSphere = true;
@@ -34,7 +51,6 @@ export function addStack(scene, physicsWorld) {
         rb.setRestitution(0.5);
         rb.setFriction(1);
         rb.setRollingFriction(1);
-
       } else {
         mesh = new THREE.Mesh(
           new THREE.BoxGeometry(4, 4, 4),
@@ -52,12 +68,11 @@ export function addStack(scene, physicsWorld) {
         rb.setRollingFriction(5);
       }
 
-      mesh.castShadow   = true;
-      mesh.receiveShadow= true;
+      mesh.castShadow    = true;
+      mesh.receiveShadow = true;
       scene.add(mesh);
       physicsWorld.addRigidBody(rb.body_);
       rigidBodies.push({ mesh, rigidBody: rb });
-
       isSphere = !isSphere;
     }
   }
@@ -65,16 +80,20 @@ export function addStack(scene, physicsWorld) {
   return rigidBodies;
 }
 
+/**
+ * Spawn a random box into the scene + physics world.
+ */
 export function spawnRandom(scene, physicsWorld, rigidBodies) {
   const scale = Math.random() * 4 + 4;
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(scale, scale, scale),
     new THREE.MeshStandardMaterial({ color: 0x808080 })
   );
+
   mesh.position.set(Math.random() * 2 - 1, 200, Math.random() * 2 - 1);
   mesh.quaternion.set(0, 0, 0, 1);
-  mesh.castShadow   = true;
-  mesh.receiveShadow= true;
+  mesh.castShadow    = true;
+  mesh.receiveShadow = true;
   scene.add(mesh);
 
   const rb = new RigidBody();
@@ -91,43 +110,19 @@ export function spawnRandom(scene, physicsWorld, rigidBodies) {
   rigidBodies.push({ mesh, rigidBody: rb });
 }
 
+/**
+ * Remove all dynamic bodies and meshes from the scene.
+ */
 export function clearObjects(scene, physicsWorld, rigidBodies) {
-    rigidBodies.forEach(({ mesh, rigidBody }) => {
-      // 1) remove from physics world
-      physicsWorld.removeRigidBody(rigidBody.body_);
-      // 2) remove mesh from scene
-      scene.remove(mesh);
-      // 3) free Ammo memory
-      Ammo.destroy(rigidBody.body_);
-      Ammo.destroy(rigidBody.info_);
-      Ammo.destroy(rigidBody.shape_);
-      Ammo.destroy(rigidBody.motionState_);
-      Ammo.destroy(rigidBody.transform_);
-    });
-    // clear your JS array
-    rigidBodies.length = 0;
-  }
+  rigidBodies.forEach(({ mesh, rigidBody }) => {
+    physicsWorld.removeRigidBody(rigidBody.body_);
+    scene.remove(mesh);
+    Ammo.destroy(rigidBody.body_);
+    Ammo.destroy(rigidBody.info_);
+    Ammo.destroy(rigidBody.shape_);
+    Ammo.destroy(rigidBody.motionState_);
+    Ammo.destroy(rigidBody.transform_);
+  });
+  rigidBodies.length = 0;
+}
 
-  export function addWall(scene, physicsWorld) {
-    // wall dimensions: 100 wide × 10 tall × 1 deep
-    const size = new THREE.Vector3(100, 10, 1);
-    const geo  = new THREE.BoxGeometry(size.x, size.y, size.z);
-    const mat  = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    const wall = new THREE.Mesh(geo, mat);
-  
-    // lift it so its base sits on y=0 (ground is at y=0.5)
-    wall.position.set(0, size.y * 0.5, 0);
-    wall.castShadow    = false;
-    wall.receiveShadow = true;
-    scene.add(wall);
-  
-    // make it static in Ammo
-    const rb = new RigidBody();
-    rb.createBox(
-      0,
-      wall.position,
-      wall.quaternion,
-      size
-    );
-    physicsWorld.addRigidBody(rb.body_);
-  }
